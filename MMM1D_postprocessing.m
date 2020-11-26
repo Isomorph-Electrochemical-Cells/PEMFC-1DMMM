@@ -3,14 +3,14 @@ close all
 
 [I,U,SOL,x, Lsum, Np, Neq, domains] = MMM1D;
 
-
+%%
 % PLOT SOLUTION
 fig_names = {'Potentials', 'Fluxes'};
 unit_scale = [1 1 1 1 1 1 1 1;
               1e-4 1e-4 1e-4 1e2 1e2 1e2 1e2 1e2];
-quantity = {'\phi_e [V]', '\phi_p [V]', 'T [K]', '\lambda', 'x_{H_2O}', 'x_{H_2}', 'x_{O_2}', 's';
+quantity = {'\phi_e [V]', '\phi_p [V]', 'T [K]', '\lambda', 'x_{H_2O}', 'x_{O_2}', 's';
             'j_e [A/cm^2]', 'j_p [A/cm^2]', 'j_T [W/cm^2]', 'j_\lambda [umol/cm^2s]', ...
-            'j_{H_2O} [umol/cm^2s]', 'j_{H_2} [umol/cm^2s]', 'j_{O_2} [umol/cm^2s]', 'j_s [umol/cm^2s]'};
+            'j_{H_2O} [umol/cm^2s]', 'j_{O_2} [umol/cm^2s]', 'j_s [umol/cm^2s]'};
 c = jet(Np);
 for m = 1:2
     figure('Name', fig_names{m})
@@ -51,12 +51,8 @@ m=1;
 for k=1:Np
 n=5;
 x_H2O=SOL{k}.y(2*(n-1)+m,:);
-n=6;
-x_H2=SOL{k}.y(2*(n-1)+m,:);
-
-plot(SOL{k}.x*1e6,x_H2+x_H2O,'-*','Color', c(k,:))
-plot([min(SOL{k}.x*1e6) Lsum(3)*1e6],[1 1], '--k','linewidth',2)
+plot(SOL{k}.x*1e6,x_H2O,'-*','Color', c(k,:))
 xlabel('x [um]')
-ylabel('Sum of anode mole fractions')
+ylabel('x_H2O')
 end
 hold off
