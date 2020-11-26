@@ -1,0 +1,60 @@
+ONE-DIMENSIONAL STEADY-STATE NON-ISOTHERMAL MACRO-HOMOGENEOUS TWO-PHASE MASTER MEA MODEL FOR PROTON EXCHANGE MEMBRANE FUEL CELLS
+
+Authors:
+Dr. Roman Vetter, roman.vetter@zhaw.ch
+Prof. Dr. Juergen O. Schumacher, juergen.schumacher@zhaw.ch
+
+Copyright (c) 2017-2018 ZHAW-ICP
+Institute of Computational Physics ICP
+Zurich University of Applied Sciences ZHAW
+CH-8401 Winterthur, Switzerland
+
+
+
+CONTENTS
+
+This program package consists of the following files:
+
+MMM1D.m  --  MATLAB program file
+LICENSE  --  License Agreement (BSD 3-clause)
+README   --  This readme file
+
+
+
+INSTALLATION
+
+No installation is needed. Just open the program file in MATLAB.
+
+
+
+EXECUTION
+
+To run the program, open it in MATLAB and execute the function either by clicking the "Run" button on the MABLAB GUI or by typing "MMM1D;" in MATLAB's command window.
+
+
+
+INPUT
+
+There is no input needed for execution. To change material parameters or operating conditions, edit the source code directly.
+
+
+
+OUTPUT
+
+Running the program by typing "[IU, SOL] = MMM1D;" in MATLAB's command window will return the following two output data structures:
+
+IU -- a two-column matrix containing the list of computed current densities and corresponding cell voltages (i.e., the polarization curve) of the fuel cell
+
+SOL -- a cell array of solution structures (one for each row in IU) containing all potentials and fluxes
+
+
+
+ADDITIONAL COMMENTS
+
+The program generates three figure windows with all potentials, fluxes and the polarization curve plotted.
+
+By default, the program iterates over all cell voltages in steps of 50 mV.
+
+The expected runtime on a modern PC is less than ten seconds for the default setup.
+
+By default, moderate error tolerances are used (relative: 1e-4, absolute: 1e-6). Decrease these values (e.g., relative: 1e-6, absolute: 1e-10) for high precision results.
