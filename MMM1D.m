@@ -1,11 +1,13 @@
 % ONE-DIMENSIONAL STEADY-STATE NON-ISOTHERMAL MACRO-HOMOGENEOUS TWO-PHASE
 % MASTER MEA MODEL FOR PROTON EXCHANGE MEMBRANE FUEL CELLS
+% Version 2
 %
 % Authors:
-% Dr. Roman Vetter, roman.vetter@zhaw.ch
+% Dr. Robert Herrendörfer, robert.herrendoerfer@zhaw.ch
+% Dr. Roman Vetter, roman.vetter@bsse.ethz.ch
 % Prof. Dr. Juergen O. Schumacher, juergen.schumacher@zhaw.ch
 %
-% Copyright (c) 2017-2018 ZHAW-ICP
+% Copyright (c) 2017-2020 ZHAW-ICP
 % Institute of Computational Physics ICP
 % Zurich University of Applied Sciences ZHAW
 % CH-8401 Winterthur, Switzerland
