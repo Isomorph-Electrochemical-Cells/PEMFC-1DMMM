@@ -2,7 +2,7 @@
 % MASTER MEA MODEL FOR PROTON EXCHANGE MEMBRANE FUEL CELLS
 %
 % Authors:
-% Version 2:
+% Version 2: modifications from version 1
 % Dr. Robert Herrendörfer, robert.herrendoerfer@zhaw.ch
 % Prof. Dr. Juergen O. Schumacher, juergen.schumacher@zhaw.ch
 
