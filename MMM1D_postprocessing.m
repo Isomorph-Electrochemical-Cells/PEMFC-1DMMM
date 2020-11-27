@@ -6,11 +6,11 @@ close all
 %%
 % PLOT SOLUTION
 fig_names = {'Potentials', 'Fluxes'};
-unit_scale = [1 1 1 1 1 1 1;
-              1e-4 1e-4 1e-4 1e2 1e2 1e2 1e2];
-quantity = {'\phi_e [V]', '\phi_p [V]', 'T [K]', '\lambda', 'w_{H_2O}', 'w_{O_2}', 's';
+unit_scale = [1 1 1 1 1 1 1 1;
+              1e-4 1e-4 1e-4 1e2 1e2 1e2 1e2 1e2];
+quantity = {'\phi_e [V]', '\phi_p [V]', 'T [K]', '\lambda', 'w_{H_2O}', 'w_{O_2}', 's', 'P_gas [Pa]';
             'j_e [A/cm^2]', 'j_p [A/cm^2]', 'j_T [W/cm^2]', 'j_\lambda [umol/cm^2s]', ...
-            'j_{H_2O} [ug/cm^2s]', 'j_{O_2} [ug/cm^2s]', 'j_s [umol/cm^2s]'};
+            'j_{H_2O} [ug/cm^2s]', 'j_{O_2} [ug/cm^2s]', 'j_s [umol/cm^2s]','rho_u_gas [ug/cm^2s]'};
 c = jet(Np);
 for m = 1:2
     figure('Name', fig_names{m})
