@@ -31,7 +31,7 @@ P_ref = 101325; % [Pa] reference pressure
 T_ref = T_0+80; % [K] reference temperature
 
 % OPERATING CONDITIONS
-U = 1.15:-0.05:0.00; % [V] list of cell voltages
+U = 1.15:-0.05:1.00; % [V] list of cell voltages
 P_A = 1.5e5; % [Pa] total pressure in anode gas channel
 P_C = 1.5e5; % [Pa] total pressure in cathode gas channel
 RH_A = 0.9; % [-] relative humidity in anode gas channel
@@ -62,7 +62,8 @@ k_CL = 0.27; % [W/(m*K)] thermal conductivity of CL
 k_PEM = 0.3; % [W/(m*K)] thermal conductivity of PEM
 s_im = s_C; % [-] immobile liquid water saturation
 V_m = 1.02/1.97e3; % [m^3/mol] molar volume of dry membrane (equivalent weight divided by mass density)
-V_w = M_H2O/0.978e3; % [m^3/mol] molar volume of liquid water (molar mass divided by mass density)
+rho_liq = 0.978e3; % [kg/m^3] density of water 
+V_w = M_H2O/rho_liq; % [m^3/mol] molar volume of liquid water (molar mass divided by mass density)
 mu_gas = 2.1e-5;  % [Pa*s] gas density 
 eps_i_CL = 0.3; % [-] volume fraction of ionomer in dry CL
 eps_p_GDL = 0.76; % [-] porosity of GDL
@@ -103,8 +104,12 @@ sigma_p = @(eps_i,lambda,T) eps_i^1.5*116*max(0,f(lambda)-0.06).^1.5.*A(15e3,T);
 sorption = @(RH) 0.043+17.81*RH-39.85*RH.^2+36.0*RH.^3; % [-] vapor sorption isotherm of Nafion
 D_lambda = @(eps_i,lambda,T) eps_i^1.5*(3.842*lambda.^3-32.03*lambda.^2+67.74*lambda)./(lambda.^3-2.115*lambda.^2-33.013*lambda+103.37)*1e-10.*A(20e3,T); % [m^2/s] diffusion coefficient of water in Nafion
 xi = @(lambda) 2.5*lambda/22; % [-] electro-osmotic drag coefficient of Nafion
-dpds = @(s) 0.00011*44.02*exp(-44.02*(s-0.496))+278.3*8.103*exp(8.103*(s-0.496)); % [Pa] derivative of capillary pressure-saturation relationship of GDL
-D_s = @(kappa,s,T) kappa*(1e-6+s_red(s).^3)./mu(T).*dpds(s); % [m^2/s] liquid water transport coefficient
+%dpds = @(s) 0.00011*44.02*exp(-44.02*(s-0.496))+278.3*8.103*exp(8.103*(s-0.496)); % [Pa] derivative of capillary pressure-saturation relationship of GDL
+pc   = @(s) -0.00011*exp(-44.02*(s-0.496))+278.3*exp(8.103*(s-0.496))-191.8; % [Pa] capillary pressure-saturation relationship of GDL
+kappa_rel_liq=@(s) s;
+kappa_rel_gas=@(s) 1-s;
+P_liq_C=(pc(s_C)+P_C);
+
 
 % INITIAL MESH
 Lsum = [0 cumsum(L)];
@@ -165,7 +170,7 @@ function dydx = odefun(x, y, subdomain)
     lambda = y( 7,:); j_lambda = y( 8,:);
     w_H2O  = y( 9,:); j_H2O    = y(10,:);
     w_O2   = y(11,:); j_O2     = y(12,:);
-    s      = y(13,:); j_s      = y(14,:);
+    P_liq  = y(13,:); rho_u_liq= y(14,:);
     P_gas  = y(15,:); rho_u_gas= y(16,:);
 
     % ZERO-INITIALIZE ALL DERIVATIVES
@@ -176,7 +181,7 @@ function dydx = odefun(x, y, subdomain)
     dlambda = z; dj_lambda = z;
     dw_H2O  = z; dj_H2O    = z;
     dw_O2   = z; dj_O2     = z;
-    ds      = z; dj_s      = z;
+    dP_liq  = z; drho_u_liq= z;
     dP_gas  = z; drho_u_gas= z;
 
     % COMPUTE DERIVATIVES
@@ -191,6 +196,7 @@ function dydx = odefun(x, y, subdomain)
             dP_gas=-u_gas./(kappa_GDL/mu_gas);
             dphi_e = -j_e/sigma_e_GDL; % electron flux: j_e = -sigma_e*grad(phi_e)
             dT = -j_T/k_GDL; % heat flux: j_T = -k*grad(T)
+            s=0;
             dw_H2O = -(j_H2O-rho_gas.*w_H2O.*u_gas)./(rho_gas.*D_H2O_A(eps_p_GDL,tau_GDL,s,T,P_gas)); % water vapor flux: j_H2O = -rho*D_H2O*grad(w_H2O)
             dj_T = -j_e.*dphi_e; % conservation of heat: div(j_T) = S_T
         case 2 % ACL
@@ -215,14 +221,15 @@ function dydx = odefun(x, y, subdomain)
             dphi_p = -j_p./sigma_p(eps_i_CL,lambda,T); % proton flux: j_p = -sigma_p*grad(phi_p)
             dT = -j_T/k_CL; % heat flux: j_T = -k*grad(T)
             dlambda = (-j_lambda+xi(lambda)/F.*j_p)*V_m./D_lambda(eps_i_CL,lambda,T); % dissolved water flux: j_lambda = -D_lambda/V_m*grad(lambda)+xi/F*j_p
+            s=0;
             dw_H2O = -(j_H2O-rho_gas.*w_H2O.*u_gas)./(rho_gas.*D_H2O_A(eps_p_CL,tau_CL,s,T,P_gas)); % water vapor flux: j_H2O = -C*D_H2O*grad(w_H2O)
             dj_e = -i; % conservation of electrons: div(j_e) = S_e
             dj_p = i; % conservation of protons: div(j_p) = S_p
             dj_T = -j_e.*dphi_e-j_p.*dphi_p+i.*eta-S_F.*T*DeltaS_HOR+H_ad*S_ad; % conservation of heat: div(j_T) = S_T
             dj_lambda = S_ad; % conservation of dissolved water: div(j_lambda) = S_lambda
-            sumS=-M_H2O*S_ad-M_H2*S_F; % sum of all source term of gas species
+            sumS_gas=-M_H2O*S_ad-M_H2*S_F; % sum of all source term of gas species
             dj_H2O = -S_ad*M_H2O; % conservation of water vapor: div(j_H2O) = S_H2O
-            drho_u_gas=sumS;
+            drho_u_gas=sumS_gas;
         case 3 % PEM
             dphi_p = -j_p./sigma_p(1,lambda,T); % proton flux: j_p = -sigma_p*grad(phi_p)
             dT = -j_T/k_PEM; % heat flux: j_T = -k*grad(T)
@@ -235,6 +242,8 @@ function dydx = odefun(x, y, subdomain)
             x_O2=w_O2/M_O2.*Mn;
             C = P_gas./(R*T); % total interstitial gas concentration
             rho_gas=Mn.*C; % total gas density
+            p_c=P_liq-P_gas;
+            s = pc_s(p_c,s_im);
             x_sat = P_sat(T)./P_gas; % saturation water vapor mole fraction
             S_ec = gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
             lambda_eq = sorption(x_H2O./x_sat); % equilibrium water content of ionomer
@@ -245,23 +254,25 @@ function dydx = odefun(x, y, subdomain)
             S_F = i/(2*F); % Faraday's law
             % Flux definitions
             u_gas=rho_u_gas./rho_gas;
-            dP_gas=-u_gas./(kappa_CL/mu_gas);
+            u_liq=rho_u_liq./rho_liq;
+            dP_gas=-u_gas./(kappa_GDL*kappa_rel_gas(s)/mu_gas);
+            dP_liq=-u_liq./(kappa_GDL*kappa_rel_liq(s)/mu(T));
             dphi_e = -j_e/sigma_e_CL; % electron flux: j_e = -sigma_e*grad(phi_e)
             dphi_p = -j_p./sigma_p(eps_i_CL,lambda,T); % proton flux: j_p = -sigma_p*grad(phi_p)
             dT = -j_T/k_CL; % heat flux: j_T = -k*grad(T)
             dlambda = (-j_lambda+xi(lambda)/F.*j_p)*V_m./D_lambda(eps_i_CL,lambda,T); % dissolved water flux: j_lambda = -D_lambda/V_m*grad(lambda)+xi/F*j_p
             dw_H2O = -(j_H2O-rho_gas.*w_H2O.*u_gas)./(rho_gas.*D_H2O_C(eps_p_CL,tau_CL,s,T,P_gas)); % water vapor flux: j_H2O = -C*D_H2O*grad(x_H2O)
             dw_O2 = -(j_O2-rho_gas.*w_O2.*u_gas)./(rho_gas.*D_O2(eps_p_CL,tau_CL,s,T,P_gas)); % oxygen flux: j_O2 = -C*D_O2*grad(x_O2)
-            ds = -j_s*V_w./D_s(kappa_CL,s,T); % liquid water flux: j_s = -D_s/V_w*grad(s)
+            %ds = -j_s*V_w./D_s(kappa_CL,s,T); % liquid water flux: j_s = -D_s/V_w*grad(s)
             dj_e = i; % conservation of electrons: div(j_e) = S_e
             dj_p = -i; % conservation of protons: div(j_p) = S_p
             dj_T = -j_e.*dphi_e-j_p.*dphi_p+i.*eta-S_F.*T*DeltaS_ORR+H_ad*S_ad+H_ec*S_ec; % conservation of heat: div(j_T) = S_T
             dj_lambda = S_F+S_ad; % conservation of dissolved water: div(j_lambda) = S_lambda
-            sumS=-M_H2O*(S_ec+S_ad)-M_O2*S_F/2; % sum of all source term of gas species
+            sumS_gas=-M_H2O*(S_ec+S_ad)-M_O2*S_F/2; % sum of all source term of gas species
             dj_H2O =-M_H2O*(S_ec+S_ad); % conservation of water vapor: div(j_H2O) = S_H2O
             dj_O2 =-M_O2*S_F/2; % conservation of oxygen: div(j_O2) = S_O2
-            dj_s = S_ec; % conservation of liquid water: div(j_s) = S_s
-            drho_u_gas=sumS;
+            drho_u_liq = M_H2O*S_ec; % conservation of liquid water: div(rho_liq*u_liq) = S_s
+            drho_u_gas=sumS_gas;
         case 5 % CGDL
             w_N2=1-w_H2O-w_O2;
             Mn=1./(w_H2O/M_H2O+w_O2/M_O2+w_N2/M_N2);
@@ -269,20 +280,24 @@ function dydx = odefun(x, y, subdomain)
             C = P_gas./(R*T); % total interstitial gas concentration
             rho_gas=Mn.*C; % total gas density
             x_sat = P_sat(T)./P_gas; % saturation water vapor mole fraction
-            S_ec = gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
             % Flux definitions
             u_gas=rho_u_gas./rho_gas;
-            dP_gas=-u_gas./(kappa_GDL/mu_gas);
+            u_liq=rho_u_liq./rho_liq;
+            p_c=P_liq-P_gas;
+            s = pc_s(p_c,s_im);
+            dP_gas=-u_gas./(kappa_GDL*kappa_rel_gas(s)/mu_gas);
+            dP_liq=-u_liq./(kappa_GDL*kappa_rel_liq(s)/mu(T));
+            S_ec = gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
             dphi_e = -j_e/sigma_e_GDL; % electron flux: j_e = -sigma_e*grad(phi_e)
             dT = -j_T/k_GDL; % heat flux: j_T = -k*grad(T)
             dw_H2O = -(j_H2O-rho_gas.*w_H2O.*u_gas)./(rho_gas.*D_H2O_C(eps_p_GDL,tau_GDL,s,T,P_gas)); % water vapor flux: j_H2O = -C*D_H2O*grad(w_H2O)
             dw_O2 = -(j_O2-rho_gas.*w_O2.*u_gas)./(rho_gas.*D_O2(eps_p_GDL,tau_GDL,s,T,P_gas)); % oxygen flux: j_O2 = -C*D_O2*grad(w_O2)
-            ds = -j_s*V_w./D_s(kappa_GDL,s,T); % liquid water flux: j_s = -D_s/V_w*grad(s)
+            %ds = -j_s*V_w./D_s(kappa_GDL,s,T); % liquid water flux: j_s = -D_s/V_w*grad(s)
             dj_T = -j_e.*dphi_e+H_ec*S_ec; % conservation of heat: div(j_T) = S_T
-            sumS=-M_H2O*S_ec;
+            sumS_gas=-M_H2O*S_ec;
             dj_H2O = -M_H2O*S_ec; % conservation of water vapor: div(j_H2O) = S_H2O
-            dj_s = S_ec; % conservation of liquid water: div(j_s) = S_s
-            drho_u_gas=sumS;
+            drho_u_liq = M_H2O*S_ec; % conservation of liquid water: div(j_s) = S_s
+            drho_u_gas = sumS_gas;
     end
     % ASSEMBLE DERIVATIVES
     dydx = [dphi_e; dj_e;
@@ -291,12 +306,12 @@ function dydx = odefun(x, y, subdomain)
             dlambda; dj_lambda;
             dw_H2O; dj_H2O;
             dw_O2; dj_O2;
-            ds; dj_s;
+            dP_liq; drho_u_liq;
             dP_gas; drho_u_gas];
 end
 
 % INITIAL GUESS
-function y0 = yinit(x, subdomain)
+function y0 = yinit(~, subdomain)
 
     % A ROUGH ESTIMATE OF THE POTENTIALS FOR THE FIRST CELL VOLTAGE
     phi_e = iff(subdomain > 3, U(1), 0);
@@ -305,11 +320,11 @@ function y0 = yinit(x, subdomain)
     lambda = iff(subdomain > 1 && subdomain < 5, sorption(1), 0);
     w_H2O = iff(subdomain < 3, w_H2O_A, iff(subdomain > 3, w_H2O_C, 0));
     w_O2 = iff(subdomain > 3, w_O2_C, 0);
-    s = iff(subdomain > 3, s_C, 0);
+    P_liq = iff(subdomain > 3, P_liq_C, 0);
     P_gas = iff(subdomain < 3, P_A, iff(subdomain > 3, P_C, 0));
     
     % ALL FLUXES ARE INITIALLY ZERO
-    y0 = [phi_e; 0; phi_p; 0; T; 0; lambda; 0; w_H2O; 0; w_O2; 0; s; 0; P_gas; 0];
+    y0 = [phi_e; 0; phi_p; 0; T; 0; lambda; 0; w_H2O; 0; w_O2; 0; P_liq; 0; P_gas; 0];
 
 end
 
@@ -371,7 +386,7 @@ function res = bcfun(ya, yb, U)
     % LIQUID WATER
     res(6*Neq+13) = ya(13,5) - yb(13,4); % potential continuity between CCL & CGDL
     res(6*Neq+14) = ya(14,4); % zero flux between PEM & CCL
-    res(8*Neq+13) = yb(13,5) - s_C; % cathode GC liquid water content
+    res(8*Neq+13) = yb(13,5) - P_liq_C; % cathode GC liquid water content
     res(8*Neq+14) = ya(14,5) - yb(14,4); % flux continuity between CCL & CGDL
     
     % GAS
