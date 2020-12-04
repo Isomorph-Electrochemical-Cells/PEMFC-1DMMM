@@ -18,7 +18,7 @@ c = jet(Np);
 for m = 1:2
     figure('Name', fig_names{m},'units','centimeters','position',[0 20-(m-1)*20 35 12])
     for n = 1:Neq
-        subplot(2,4,n)
+        subplot(2,4,n)  
         box on
         hold on
         us = unit_scale(m,n);

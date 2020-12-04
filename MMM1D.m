@@ -106,8 +106,8 @@ D_lambda = @(eps_i,lambda,T) eps_i^1.5*(3.842*lambda.^3-32.03*lambda.^2+67.74*la
 xi = @(lambda) 2.5*lambda/22; % [-] electro-osmotic drag coefficient of Nafion
 %dpds = @(s) 0.00011*44.02*exp(-44.02*(s-0.496))+278.3*8.103*exp(8.103*(s-0.496)); % [Pa] derivative of capillary pressure-saturation relationship of GDL
 pc   = @(s) -0.00011*exp(-44.02*(s-0.496))+278.3*exp(8.103*(s-0.496))-191.8; % [Pa] capillary pressure-saturation relationship of GDL
-kappa_rel_liq=@(s) s;
-kappa_rel_gas=@(s) 1-s;
+kappa_rel_liq=@(s) max(1e-6,s);
+%kappa_rel_gas=@(s) max(1e-6,1-s);
 P_liq_C=(pc(s_C)+P_C);
 
 
@@ -245,7 +245,7 @@ function dydx = odefun(x, y, subdomain)
             p_c=P_liq-P_gas;
             s = pc_s(p_c,s_im);
             x_sat = P_sat(T)./P_gas; % saturation water vapor mole fraction
-            S_ec = gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
+            S_ec = zeros(size(s)); % gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
             lambda_eq = sorption(x_H2O./x_sat); % equilibrium water content of ionomer
             S_ad = k_ad(lambda,lambda_eq,T)/(L(4)*V_m).*(lambda_eq-lambda); % absorption/desorption reaction rate
             P_O2 = x_O2.*P_gas; % partial pressure of oxygen
@@ -255,7 +255,7 @@ function dydx = odefun(x, y, subdomain)
             % Flux definitions
             u_gas=rho_u_gas./rho_gas;
             u_liq=rho_u_liq./rho_liq;
-            dP_gas=-u_gas./(kappa_GDL*kappa_rel_gas(s)/mu_gas);
+            dP_gas=-u_gas./(kappa_GDL/mu_gas);
             dP_liq=-u_liq./(kappa_GDL*kappa_rel_liq(s)/mu(T));
             dphi_e = -j_e/sigma_e_CL; % electron flux: j_e = -sigma_e*grad(phi_e)
             dphi_p = -j_p./sigma_p(eps_i_CL,lambda,T); % proton flux: j_p = -sigma_p*grad(phi_p)
@@ -285,9 +285,9 @@ function dydx = odefun(x, y, subdomain)
             u_liq=rho_u_liq./rho_liq;
             p_c=P_liq-P_gas;
             s = pc_s(p_c,s_im);
-            dP_gas=-u_gas./(kappa_GDL*kappa_rel_gas(s)/mu_gas);
+            dP_gas=-u_gas./(kappa_GDL/mu_gas);
             dP_liq=-u_liq./(kappa_GDL*kappa_rel_liq(s)/mu(T));
-            S_ec = gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
+            S_ec = zeros(size(s)); gamma_ec(x_H2O,x_sat,s,T).*C.*(x_H2O-x_sat); % evaporation/condensation reaction rate
             dphi_e = -j_e/sigma_e_GDL; % electron flux: j_e = -sigma_e*grad(phi_e)
             dT = -j_T/k_GDL; % heat flux: j_T = -k*grad(T)
             dw_H2O = -(j_H2O-rho_gas.*w_H2O.*u_gas)./(rho_gas.*D_H2O_C(eps_p_GDL,tau_GDL,s,T,P_gas)); % water vapor flux: j_H2O = -C*D_H2O*grad(w_H2O)
